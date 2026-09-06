@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -88,13 +88,13 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body className="min-h-screen bg-background font-sans antialiased">
         <LocationProvider>
           <div className="relative flex min-h-screen flex-col">
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
               <div className="container flex h-14 items-center justify-between">
                 <div className="flex items-center gap-6">
                   <Link to="/" className="flex items-center space-x-2 font-bold">
                     <span>Dawncast</span>
                   </Link>
-                  <nav className="hidden md:flex items-center space-x-4 text-sm font-medium">
+                  <nav className="flex items-center space-x-4 text-sm font-medium">
                     {NAV.map((item) => (
                       <Link
                         key={item.to}
