@@ -9,9 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { LocationProvider } from "../lib/location-context";
-import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -114,7 +112,6 @@ function RootDocument({ children }: { children: ReactNode }) {
 
             <main className="flex-1">{children}</main>
           </div>
-          <Toaster />
         </LocationProvider>
         <Scripts />
       </body>
