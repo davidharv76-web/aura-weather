@@ -1,118 +1,142 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { z } from "zod";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-import { DEFAULT_PLACE, type GeoPlace, type Units } from "./weather";
-
-export const locationSearchSchema = z.object({
-  lat: z.coerce.number().optional(),
-  lon: z.coerce.number().optional(),
-  place: z.string().optional(),
-  region: z.string().optional(),
-  country: z.string().optional(),
-});
-
-export type LocationSearch = z.infer<typeof locationSearchSchema>;
-
-export function validateLocationSearch(search: Record<string, unknown>): LocationSearch {
-  return locationSearchSchema.parse(search);
+export interface LocationState {
+  units: "c" | "f";
+  setUnits: (u: "c" | "f") => void;
+  place: { name: string; lat: number; lon: number };
+  setPlace: (p: { name: string; lat: number; lon: number }) => void;
+  forecast: any;
+  setForecast: (f: any) => void;
+  air: any;
+  setAir: (a: any) => void;
 }
 
-const RECENTS_KEY = "dawncast.recents";
-const UNITS_KEY = "dawncast.units";
-
-type Ctx = {
-  place: GeoPlace;
-  setPlace: (place: GeoPlace) => void;
-  recents: GeoPlace[];
-  units: Units;
-  setUnits: (units: Units) => void;
+const DEFAULT_PLACE = {
+  name: "New York, United States",
+  lat: 40.7128,
+  lon: -74.006,
 };
 
-const LocationContext = createContext<Ctx | null>(null);
+const DEFAULT_FORECAST = {
+  current: {
+    time: new Date().toISOString(),
+    temperature: 20,
+    apparentTemperature: 21,
+    weatherCode: 0,
+    isDay: true,
+    humidity: 55,
+    windSpeed: 12,
+    windGusts: 15,
+    windDirection: 180,
+    uvIndex: 5,
+    dewPoint: 11,
+    pressure: 1013,
+    visibility: 10000,
+    cloudCover: 20,
+  },
+  hourly: Array.from({ length: 24 }).map((_, i) => ({
+    time: new Date(Date.now() + i * 3600000).toISOString(),
+    temperature: 20 + Math.sin(i) * 3,
+    weatherCode: 0,
+    isDay: i >= 6 && i <= 20,
+    precipitationProbability: 0,
+  })),
+  daily: Array.from({ length: 7 }).map((_, i) => ({
+    date: new Date(Date.now() + i * 86400000).toISOString(),
+    tempMin: 15,
+    tempMax: 23,
+    precipitationProbabilityMax: 10,
+    precipitationSum: 0,
+    windGustsMax: 18,
+    weatherCode: 0,
+  })),
+};
+
+const LocationContext = createContext<LocationState | null>(null);
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
-  const search = useSearch({ strict: false }) as LocationSearch;
-  const navigate = useNavigate();
-  const [recents, setRecents] = useState<GeoPlace[]>([]);
-  const [units, setUnitsState] = useState<Units>("metric");
+  const [units, setUnits] = useState<"c" | "f">("c");
+  const [place, setPlace] = useState(DEFAULT_PLACE);
+  const [forecast, setForecast] = useState<any>(DEFAULT_FORECAST);
+  const [air, setAir] = useState<any>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(RECENTS_KEY);
-      if (raw) setRecents(JSON.parse(raw) as GeoPlace[]);
-      const u = localStorage.getItem(UNITS_KEY);
-      if (u === "metric" || u === "imperial") setUnitsState(u);
-    } catch {
-      // ignore unreadable storage
-    }
-  }, []);
-
-  const place: GeoPlace = useMemo(() => {
-    if (typeof search.lat === "number" && typeof search.lon === "number" && search.place) {
-      return {
-        id: 0,
-        name: search.place,
-        admin1: search.region,
-        country: search.country,
-        latitude: search.lat,
-        longitude: search.lon,
-      };
-    }
-    return DEFAULT_PLACE;
-  }, [search.lat, search.lon, search.place, search.region, search.country]);
-
-  const setPlace = useCallback(
-    (next: GeoPlace) => {
-      setRecents((prev) => {
-        const merged = [
-          next,
-          ...prev.filter(
-            (p) =>
-              Math.abs(p.latitude - next.latitude) > 0.01 ||
-              Math.abs(p.longitude - next.longitude) > 0.01,
-          ),
-        ].slice(0, 6);
-        try {
-          localStorage.setItem(RECENTS_KEY, JSON.stringify(merged));
-        } catch {
-          // ignore
+    // Fetch live weather from Open-Meteo on client load
+    async function loadLiveData() {
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${place.lat}&longitude=${place.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_gusts_10m_max&timezone=auto`
+        );
+        const data = await res.json();
+        if (data && data.current) {
+          setForecast({
+            current: {
+              time: data.current.time,
+              temperature: data.current.temperature_2m,
+              apparentTemperature: data.current.apparent_temperature,
+              weatherCode: data.current.weather_code,
+              isDay: Boolean(data.current.is_day),
+              humidity: data.current.relative_humidity_2m,
+              windSpeed: data.current.wind_speed_10m,
+              windGusts: data.current.wind_gusts_10m,
+              windDirection: data.current.wind_direction_10m,
+              uvIndex: data.current.uv_index,
+              dewPoint: 10,
+              pressure: data.current.pressure_msl,
+              visibility: 10000,
+              cloudCover: data.current.cloud_cover,
+            },
+            hourly: (data.hourly.time || []).map((t: string, idx: number) => ({
+              time: t,
+              temperature: data.hourly.temperature_2m[idx],
+              weatherCode: data.hourly.weather_code[idx],
+              isDay: Boolean(data.hourly.is_day[idx]),
+              precipitationProbability: data.hourly.precipitation_probability[idx] || 0,
+            })),
+            daily: (data.daily.time || []).map((t: string, idx: number) => ({
+              date: t,
+              tempMin: data.daily.temperature_2m_min[idx],
+              tempMax: data.daily.temperature_2m_max[idx],
+              precipitationProbabilityMax: data.daily.precipitation_probability_max[idx] || 0,
+              precipitationSum: data.daily.precipitation_sum[idx] || 0,
+              windGustsMax: data.daily.wind_gusts_10m_max[idx] || 0,
+              weatherCode: data.daily.weather_code[idx],
+            })),
+          });
         }
-        return merged;
-      });
-      void navigate({
-        to: ".",
-        search: {
-          lat: Number(next.latitude.toFixed(4)),
-          lon: Number(next.longitude.toFixed(4)),
-          place: next.name,
-          region: next.admin1,
-          country: next.country,
-        },
-      });
-    },
-    [navigate],
-  );
-
-  const setUnits = useCallback((next: Units) => {
-    setUnitsState(next);
-    try {
-      localStorage.setItem(UNITS_KEY, next);
-    } catch {
-      // ignore
+      } catch (err) {
+        console.error("Failed to load live forecast:", err);
+      }
     }
-  }, []);
+    loadLiveData();
+  }, [place]);
 
-  const value = useMemo(
-    () => ({ place, setPlace, recents, units, setUnits }),
-    [place, setPlace, recents, units, setUnits],
+  return (
+    <LocationContext.Provider
+      value={{ units, setUnits, place, setPlace, forecast, setForecast, air, setAir }}
+    >
+      {children}
+    </LocationContext.Provider>
   );
-
-  return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
 }
 
 export function useLocationState() {
-  const ctx = useContext(LocationContext);
-  if (!ctx) throw new Error("useLocationState must be used inside LocationProvider");
-  return ctx;
+  const context = useContext(LocationContext);
+  if (!context) {
+    return {
+      units: "c" as const,
+      setUnits: () => {},
+      place: DEFAULT_PLACE,
+      setPlace: () => {},
+      forecast: DEFAULT_FORECAST,
+      setForecast: () => {},
+      air: null,
+      setAir: () => {},
+    };
+  }
+  return context;
+}
+
+export function validateLocationSearch(search: Record<string, unknown>) {
+  return search;
 }
