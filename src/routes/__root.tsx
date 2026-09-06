@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { LocationProvider } from "../lib/location-context";
 
@@ -71,12 +71,11 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient());
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = router.subscribe("onBeforeLoad", () => {
-      // route transitions
-    });
+    const unsubscribe = router.subscribe("onBeforeLoad", () => {});
     return () => unsubscribe();
   }, [router]);
 
@@ -86,33 +85,35 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <LocationProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-              <div className="container flex h-14 items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <Link to="/" className="flex items-center space-x-2 font-bold">
-                    <span>Dawncast</span>
-                  </Link>
-                  <nav className="flex items-center space-x-4 text-sm font-medium">
-                    {NAV.map((item) => (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        className="transition-colors hover:text-foreground/80 text-foreground/60"
-                        activeProps={{ className: "text-foreground font-semibold" }}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                  </nav>
+        <QueryClientProvider client={queryClient}>
+          <LocationProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+                <div className="container flex h-14 items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <Link to="/" className="flex items-center space-x-2 font-bold">
+                      <span>Dawncast</span>
+                    </Link>
+                    <nav className="flex items-center space-x-4 text-sm font-medium">
+                      {NAV.map((item) => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          className="transition-colors hover:text-foreground/80 text-foreground/60"
+                          activeProps={{ className: "text-foreground font-semibold" }}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </nav>
+                  </div>
                 </div>
-              </div>
-            </header>
+              </header>
 
-            <main className="flex-1">{children}</main>
-          </div>
-        </LocationProvider>
+              <main className="flex-1">{children}</main>
+            </div>
+          </LocationProvider>
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
