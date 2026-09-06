@@ -10,7 +10,6 @@ import {
   Thermometer,
   Wind,
 } from "lucide-react";
-
 import { ActivityInsights } from "@/components/weather/ActivityInsights";
 import { AirQualityCard } from "@/components/weather/AirQualityCard";
 import { CelestialTracker } from "@/components/weather/CelestialTracker";
@@ -68,18 +67,36 @@ function TodayPage() {
   return (
     <PageFrame>
       {({ forecast, air }) => {
+        if (!forecast?.current) {
+          return (
+            <div className="glass flex min-h-[300px] items-center justify-center rounded-3xl p-8 text-center text-muted-foreground">
+              Loading weather data...
+            </div>
+          );
+        }
+
         const c = forecast.current;
         const info = describeCode(c.weatherCode);
-        const today = forecast.daily[0]!;
+        const today = forecast.daily?.[0] ?? {
+          date: new Date().toISOString(),
+          tempMin: c.temperature,
+          tempMax: c.temperature,
+          precipitationProbabilityMax: 0,
+          precipitationSum: 0,
+          windGustsMax: c.windGusts,
+        };
+
         const nowIndex = Math.max(
           0,
-          forecast.hourly.findIndex((h) => h.time.slice(0, 13) === c.time.slice(0, 13)),
+          (forecast.hourly ?? []).findIndex(
+            (h) => h.time.slice(0, 13) === c.time.slice(0, 13)
+          )
         );
-        const next24 = forecast.hourly.slice(nowIndex, nowIndex + 24);
-        const week = forecast.daily.slice(0, 7);
-        const weekMin = Math.min(...week.map((d) => d.tempMin));
-        const weekMax = Math.max(...week.map((d) => d.tempMax));
-        const uv = uvBand(c.uvIndex);
+        const next24 = (forecast.hourly ?? []).slice(nowIndex, nowIndex + 24);
+        const week = (forecast.daily ?? []).slice(0, 7);
+        const weekMin = week.length ? Math.min(...week.map((d) => d.tempMin)) : 0;
+        const weekMax = week.length ? Math.max(...week.map((d) => d.tempMax)) : 100;
+        const uv = uvBand(c.uvIndex ?? 0);
 
         return (
           <>
@@ -97,16 +114,11 @@ function TodayPage() {
                       {formatTemp(c.temperature, units)}
                     </p>
                     <div className="pt-3">
-                      <WeatherGlyph
-                        group={info.group}
-                        isDay={c.isDay}
-                        className="h-16 w-16 text-cream"
-                      />
+                      <WeatherGlyph group={info.group} isDay={c.isDay} className="h-16 w-16 text-cream" />
                     </div>
                   </div>
                   <p className="mt-4 max-w-md text-lg text-foreground/90">
-                    {info.label}. Feels like {formatTemp(c.apparentTemperature, units, true)}, with
-                    a high of {formatTemp(today.tempMax, units)} and a low of{" "}
+                    {info.label}. Feels like {formatTemp(c.apparentTemperature, units, true)}, with a high of {formatTemp(today.tempMax, units)} and a low of{" "}
                     {formatTemp(today.tempMin, units)}.
                   </p>
                   <div className="mt-6 flex flex-wrap gap-2 text-sm">
@@ -121,7 +133,6 @@ function TodayPage() {
                     </Chip>
                   </div>
                 </div>
-
                 <div className="w-full max-w-sm shrink-0 space-y-6 lg:w-[22rem]">
                   <CelestialTracker forecast={forecast} />
                   <div className="glass rounded-3xl p-5">
@@ -133,9 +144,7 @@ function TodayPage() {
                 </div>
               </div>
             </section>
-
             <MinuteCast forecast={forecast} units={units} />
-
             <section className="mt-14">
               <SectionHeading
                 eyebrow="Next 24 hours"
@@ -146,7 +155,8 @@ function TodayPage() {
                     search={search}
                     className="flex items-center gap-1 text-sm text-accent hover:underline"
                   >
-                    72-hour detail <ArrowUpRight className="h-4 w-4" />
+                    72-hour detail
+                    <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 }
               />
@@ -162,18 +172,12 @@ function TodayPage() {
                         <p className="text-xs text-muted-foreground">
                           {i === 0 ? "Now" : formatHour(h.time)}
                         </p>
-                        <WeatherGlyph
-                          group={g.group}
-                          isDay={h.isDay}
-                          className="h-8 w-8 text-cream"
-                        />
+                        <WeatherGlyph group={g.group} isDay={h.isDay} className="h-8 w-8 text-cream" />
                         <p className="tabular font-display text-xl">
                           {formatTemp(h.temperature, units)}
                         </p>
                         <p className="tabular text-[11px] text-accent">
-                          {h.precipitationProbability > 0
-                            ? `${Math.round(h.precipitationProbability)}%`
-                            : "—"}
+                          {h.precipitationProbability > 0 ? `${Math.round(h.precipitationProbability)}%` : "—"}
                         </p>
                       </div>
                     );
@@ -181,64 +185,22 @@ function TodayPage() {
                 </div>
               </div>
             </section>
-
             <section className="mt-14">
               <SectionHeading eyebrow="Today's detail" title="Conditions in full" />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                <MetricTile
-                  icon={Thermometer}
-                  label="Feels like"
-                  value={formatTemp(c.apparentTemperature, units, true)}
-                  note={`Dew point ${formatTemp(c.dewPoint, units, true)}`}
-                />
-                <MetricTile
-                  icon={Wind}
-                  label="Wind"
-                  value={formatSpeed(c.windSpeed, units)}
-                  note={`Gusts ${formatSpeed(c.windGusts, units)} · ${windDirectionLabel(c.windDirection)}`}
-                />
-                <MetricTile
-                  icon={Droplets}
-                  label="Humidity"
-                  value={`${Math.round(c.humidity)}%`}
-                  note={`Cloud cover ${Math.round(c.cloudCover)}%`}
-                />
-                <MetricTile
-                  icon={Gauge}
-                  label="Pressure"
-                  value={formatPressure(c.pressure, units)}
-                />
-                <MetricTile
-                  icon={Eye}
-                  label="Visibility"
-                  value={formatDistance(c.visibility, units)}
-                />
-                <MetricTile
-                  icon={CloudRain}
-                  label="Precipitation"
-                  value={formatLength(today.precipitationSum, units)}
-                  note="Total expected today"
-                />
-                <MetricTile
-                  icon={Sun}
-                  label="UV index"
-                  value={`${Math.round(c.uvIndex)}`}
-                  note={uv.label}
-                />
-                <MetricTile
-                  icon={Compass}
-                  label="Max gusts today"
-                  value={formatSpeed(today.windGustsMax, units)}
-                />
+                <MetricTile icon={Thermometer} label="Feels like" value={formatTemp(c.apparentTemperature, units, true)} note={`Dew point ${formatTemp(c.dewPoint, units, true)}`} />
+                <MetricTile icon={Wind} label="Wind" value={formatSpeed(c.windSpeed, units)} note={`Gusts ${formatSpeed(c.windGusts, units)} · ${windDirectionLabel(c.windDirection)}`} />
+                <MetricTile icon={Droplets} label="Humidity" value={`${Math.round(c.humidity)}%`} note={`Cloud cover ${Math.round(c.cloudCover)}%`} />
+                <MetricTile icon={Gauge} label="Pressure" value={formatPressure(c.pressure, units)} />
+                <MetricTile icon={Eye} label="Visibility" value={formatDistance(c.visibility, units)} />
+                <MetricTile icon={CloudRain} label="Precipitation" value={formatLength(today.precipitationSum, units)} note="Total expected today" />
+                <MetricTile icon={Sun} label="UV index" value={`${Math.round(c.uvIndex)}`} note={uv.label} />
+                <MetricTile icon={Compass} label="Max gusts today" value={formatSpeed(today.windGustsMax, units)} />
               </div>
             </section>
-
             <ActivityInsights forecast={forecast} air={air} />
-
             <HealthInsights forecast={forecast} air={air} />
-
             {air && <AirQualityCard air={air} />}
-
             <section className="mt-14">
               <SectionHeading
                 eyebrow="Week ahead"
@@ -249,7 +211,8 @@ function TodayPage() {
                     search={search}
                     className="flex items-center gap-1 text-sm text-accent hover:underline"
                   >
-                    All 14 days <ArrowUpRight className="h-4 w-4" />
+                    All 14 days
+                    <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 }
               />
@@ -300,6 +263,8 @@ function TodayPage() {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="glass rounded-full px-3.5 py-1.5 text-sm text-foreground/90">{children}</span>
+    <span className="glass rounded-full px-3.5 py-1.5 text-sm text-foreground/90">
+      {children}
+    </span>
   );
 }
