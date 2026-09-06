@@ -1,0 +1,254 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system — "Warm dawn" weather.
+ * Deep plum night, mulberry mid, coral sunrise, warm gold.
+ * All colors are oklch tokens; never hardcode color utilities in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 14px);
+  --radius-3xl: calc(var(--radius) + 22px);
+  --radius-4xl: calc(var(--radius) + 34px);
+
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --color-night: var(--night);
+  --color-mulberry: var(--mulberry);
+  --color-coral: var(--coral);
+  --color-gold: var(--gold);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+
+  --color-aqi-good: var(--aqi-good);
+  --color-aqi-moderate: var(--aqi-moderate);
+  --color-aqi-poor: var(--aqi-poor);
+  --color-aqi-bad: var(--aqi-bad);
+
+  --color-chart-1: var(--coral);
+  --color-chart-2: var(--gold);
+  --color-chart-3: var(--mulberry);
+  --color-chart-4: var(--aqi-good);
+  --color-chart-5: var(--aqi-poor);
+
+  --color-sidebar: var(--card);
+  --color-sidebar-foreground: var(--card-foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-sidebar-accent: var(--accent);
+  --color-sidebar-accent-foreground: var(--accent-foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--ring);
+}
+
+:root {
+  --radius: 1.25rem;
+
+  --night: oklch(0.223 0.077 305.5);
+  --mulberry: oklch(0.401 0.113 328.4);
+  --coral: oklch(0.706 0.145 33.5);
+  --gold: oklch(0.848 0.128 87.2);
+  --cream: oklch(0.968 0.017 78.5);
+  --ink: oklch(0.198 0.05 305);
+
+  --background: oklch(0.192 0.062 305.5);
+  --foreground: oklch(0.966 0.016 78.5);
+
+  --card: oklch(0.968 0.017 78.5 / 8%);
+  --card-foreground: oklch(0.966 0.016 78.5);
+  --popover: oklch(0.245 0.072 306);
+  --popover-foreground: oklch(0.966 0.016 78.5);
+
+  --primary: oklch(0.706 0.145 33.5);
+  --primary-foreground: oklch(0.198 0.05 305);
+  --secondary: oklch(0.968 0.017 78.5 / 12%);
+  --secondary-foreground: oklch(0.966 0.016 78.5);
+  --muted: oklch(0.968 0.017 78.5 / 10%);
+  --muted-foreground: oklch(0.79 0.032 60 / 78%);
+  --accent: oklch(0.848 0.128 87.2);
+  --accent-foreground: oklch(0.198 0.05 305);
+  --destructive: oklch(0.63 0.213 22);
+  --destructive-foreground: oklch(0.98 0.01 80);
+
+  --border: oklch(0.968 0.017 78.5 / 16%);
+  --input: oklch(0.968 0.017 78.5 / 20%);
+  --ring: oklch(0.848 0.128 87.2 / 60%);
+
+  --aqi-good: oklch(0.79 0.14 155);
+  --aqi-moderate: oklch(0.86 0.13 95);
+  --aqi-poor: oklch(0.72 0.16 45);
+  --aqi-bad: oklch(0.63 0.2 20);
+
+  --sky-top: oklch(0.19 0.062 305.5);
+  --sky-mid: oklch(0.36 0.108 328);
+  --sky-low: oklch(0.62 0.146 40);
+  --sky-glow: oklch(0.85 0.128 87 / 55%);
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+  }
+}
+
+/* Sky moods: each sets the three gradient stops used by the backdrop. */
+@utility sky-dawn {
+  --sky-top: oklch(0.21 0.068 306);
+  --sky-mid: oklch(0.4 0.117 330);
+  --sky-low: oklch(0.72 0.15 45);
+  --sky-glow: oklch(0.86 0.13 88 / 62%);
+}
+
+@utility sky-day {
+  --sky-top: oklch(0.3 0.09 300);
+  --sky-mid: oklch(0.47 0.115 335);
+  --sky-low: oklch(0.78 0.13 60);
+  --sky-glow: oklch(0.9 0.115 92 / 58%);
+}
+
+@utility sky-dusk {
+  --sky-top: oklch(0.19 0.065 302);
+  --sky-mid: oklch(0.36 0.12 340);
+  --sky-low: oklch(0.65 0.16 32);
+  --sky-glow: oklch(0.8 0.14 50 / 60%);
+}
+
+@utility sky-night {
+  --sky-top: oklch(0.145 0.05 300);
+  --sky-mid: oklch(0.24 0.076 312);
+  --sky-low: oklch(0.36 0.1 330);
+  --sky-glow: oklch(0.7 0.08 300 / 40%);
+}
+
+@utility sky-storm {
+  --sky-top: oklch(0.175 0.045 300);
+  --sky-mid: oklch(0.3 0.07 320);
+  --sky-low: oklch(0.5 0.09 40);
+  --sky-glow: oklch(0.72 0.1 70 / 38%);
+}
+
+@utility glass {
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--cream) 14%, transparent),
+    color-mix(in oklab, var(--cream) 5%, transparent)
+  );
+  border: 1px solid color-mix(in oklab, var(--cream) 16%, transparent);
+  backdrop-filter: blur(18px) saturate(1.15);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, var(--cream) 18%, transparent) inset,
+    0 24px 60px -30px oklch(0.12 0.05 305 / 70%);
+}
+
+@utility glass-strong {
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--cream) 22%, transparent),
+    color-mix(in oklab, var(--cream) 9%, transparent)
+  );
+  border: 1px solid color-mix(in oklab, var(--cream) 24%, transparent);
+  backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 30px 80px -40px oklch(0.12 0.05 305 / 80%);
+}
+
+@utility text-gradient-dawn {
+  background: linear-gradient(100deg, var(--cream) 0%, var(--gold) 45%, var(--coral) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Keep Leaflet's controls legible inside the dark glass weather interface. */
+.leaflet-container {
+  background: var(--night);
+  font-family: var(--font-sans);
+}
+
+.leaflet-control-zoom a,
+.leaflet-control-attribution {
+  background: color-mix(in oklab, var(--night) 86%, transparent) !important;
+  color: var(--cream) !important;
+  border-color: var(--border) !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--gold) !important;
+}
+
+.leaflet-tooltip.dawncast-map-tooltip {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, var(--night) 92%, transparent);
+  color: var(--cream);
+  box-shadow: 0 12px 30px oklch(0.12 0.05 305 / 45%);
+}
+
+.leaflet-tooltip.dawncast-map-tooltip::before {
+  border-top-color: color-mix(in oklab, var(--night) 92%, transparent);
+}
