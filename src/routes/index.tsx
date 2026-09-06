@@ -60,21 +60,51 @@ export const Route = createFileRoute("/")({
   component: TodayPage,
 });
 
+// Default fallback data to render immediately while location state loads
+const FALLBACK_FORECAST = {
+  current: {
+    time: new Date().toISOString(),
+    temperature: 20,
+    apparentTemperature: 20,
+    weatherCode: 0,
+    isDay: true,
+    humidity: 50,
+    windSpeed: 10,
+    windGusts: 12,
+    windDirection: 180,
+    uvIndex: 5,
+    dewPoint: 10,
+    pressure: 1013,
+    visibility: 10000,
+  },
+  hourly: Array.from({ length: 24 }).map((_, i) => ({
+    time: new Date(Date.now() + i * 3600000).toISOString(),
+    temperature: 20,
+    weatherCode: 0,
+    isDay: true,
+    precipitationProbability: 0,
+  })),
+  daily: [
+    {
+      date: new Date().toISOString(),
+      tempMin: 15,
+      tempMax: 22,
+      precipitationProbabilityMax: 10,
+      precipitationSum: 0,
+      windGustsMax: 15,
+      weatherCode: 0,
+    },
+  ],
+};
+
 function TodayPage() {
   const { units, place } = useLocationState();
   const search = useSearch({ strict: false });
 
   return (
     <PageFrame>
-      {({ forecast, air }) => {
-        if (!forecast?.current) {
-          return (
-            <div className="glass flex min-h-[300px] items-center justify-center rounded-3xl p-8 text-center text-muted-foreground">
-              Loading weather data...
-            </div>
-          );
-        }
-
+      {({ forecast: rawForecast, air }) => {
+        const forecast = rawForecast?.current ? rawForecast : FALLBACK_FORECAST;
         const c = forecast.current;
         const info = describeCode(c.weatherCode);
         const today = forecast.daily?.[0] ?? {
