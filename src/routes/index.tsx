@@ -60,51 +60,17 @@ export const Route = createFileRoute("/")({
   component: TodayPage,
 });
 
-// Default fallback data to render immediately while location state loads
-const FALLBACK_FORECAST = {
-  current: {
-    time: new Date().toISOString(),
-    temperature: 20,
-    apparentTemperature: 20,
-    weatherCode: 0,
-    isDay: true,
-    humidity: 50,
-    windSpeed: 10,
-    windGusts: 12,
-    windDirection: 180,
-    uvIndex: 5,
-    dewPoint: 10,
-    pressure: 1013,
-    visibility: 10000,
-  },
-  hourly: Array.from({ length: 24 }).map((_, i) => ({
-    time: new Date(Date.now() + i * 3600000).toISOString(),
-    temperature: 20,
-    weatherCode: 0,
-    isDay: true,
-    precipitationProbability: 0,
-  })),
-  daily: [
-    {
-      date: new Date().toISOString(),
-      tempMin: 15,
-      tempMax: 22,
-      precipitationProbabilityMax: 10,
-      precipitationSum: 0,
-      windGustsMax: 15,
-      weatherCode: 0,
-    },
-  ],
-};
-
 function TodayPage() {
   const { units, place } = useLocationState();
   const search = useSearch({ strict: false });
 
   return (
     <PageFrame>
-      {({ forecast: rawForecast, air }) => {
-        const forecast = rawForecast?.current ? rawForecast : FALLBACK_FORECAST;
+      {({ forecast, air }) => {
+        if (!forecast?.current) {
+          return null;
+        }
+
         const c = forecast.current;
         const info = describeCode(c.weatherCode);
         const today = forecast.daily?.[0] ?? {
@@ -113,7 +79,7 @@ function TodayPage() {
           tempMax: c.temperature,
           precipitationProbabilityMax: 0,
           precipitationSum: 0,
-          windGustsMax: c.windGusts,
+          windGustsMax: c.windGusts ?? 0,
         };
 
         const nowIndex = Math.max(
@@ -153,10 +119,10 @@ function TodayPage() {
                   </p>
                   <div className="mt-6 flex flex-wrap gap-2 text-sm">
                     <Chip>
-                      {Math.round(today.precipitationProbabilityMax)}% chance of precipitation
+                      {Math.round(today.precipitationProbabilityMax ?? 0)}% chance of precipitation
                     </Chip>
                     <Chip>
-                      UV {Math.round(c.uvIndex)} · {uv.label}
+                      UV {Math.round(c.uvIndex ?? 0)} · {uv.label}
                     </Chip>
                     <Chip>
                       Wind {formatSpeed(c.windSpeed, units)} {windDirectionLabel(c.windDirection)}
@@ -218,14 +184,14 @@ function TodayPage() {
             <section className="mt-14">
               <SectionHeading eyebrow="Today's detail" title="Conditions in full" />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                <MetricTile icon={Thermometer} label="Feels like" value={formatTemp(c.apparentTemperature, units, true)} note={`Dew point ${formatTemp(c.dewPoint, units, true)}`} />
-                <MetricTile icon={Wind} label="Wind" value={formatSpeed(c.windSpeed, units)} note={`Gusts ${formatSpeed(c.windGusts, units)} · ${windDirectionLabel(c.windDirection)}`} />
-                <MetricTile icon={Droplets} label="Humidity" value={`${Math.round(c.humidity)}%`} note={`Cloud cover ${Math.round(c.cloudCover)}%`} />
-                <MetricTile icon={Gauge} label="Pressure" value={formatPressure(c.pressure, units)} />
-                <MetricTile icon={Eye} label="Visibility" value={formatDistance(c.visibility, units)} />
-                <MetricTile icon={CloudRain} label="Precipitation" value={formatLength(today.precipitationSum, units)} note="Total expected today" />
-                <MetricTile icon={Sun} label="UV index" value={`${Math.round(c.uvIndex)}`} note={uv.label} />
-                <MetricTile icon={Compass} label="Max gusts today" value={formatSpeed(today.windGustsMax, units)} />
+                <MetricTile icon={Thermometer} label="Feels like" value={formatTemp(c.apparentTemperature, units, true)} note={`Dew point ${formatTemp(c.dewPoint ?? 0, units, true)}`} />
+                <MetricTile icon={Wind} label="Wind" value={formatSpeed(c.windSpeed, units)} note={`Gusts ${formatSpeed(c.windGusts ?? 0, units)} · ${windDirectionLabel(c.windDirection)}`} />
+                <MetricTile icon={Droplets} label="Humidity" value={`${Math.round(c.humidity ?? 0)}%`} note={`Cloud cover ${Math.round(c.cloudCover ?? 0)}%`} />
+                <MetricTile icon={Gauge} label="Pressure" value={formatPressure(c.pressure ?? 1013, units)} />
+                <MetricTile icon={Eye} label="Visibility" value={formatDistance(c.visibility ?? 10000, units)} />
+                <MetricTile icon={CloudRain} label="Precipitation" value={formatLength(today.precipitationSum ?? 0, units)} note="Total expected today" />
+                <MetricTile icon={Sun} label="UV index" value={`${Math.round(c.uvIndex ?? 0)}`} note={uv.label} />
+                <MetricTile icon={Compass} label="Max gusts today" value={formatSpeed(today.windGustsMax ?? 0, units)} />
               </div>
             </section>
             <ActivityInsights forecast={forecast} air={air} />
@@ -263,7 +229,7 @@ function TodayPage() {
                       <WeatherGlyph group={g.group} className="h-8 w-8 shrink-0 text-cream" />
                       <p className="hidden flex-1 text-sm text-foreground/85 md:block">{g.label}</p>
                       <p className="tabular hidden w-16 text-sm text-accent sm:block">
-                        {Math.round(d.precipitationProbabilityMax)}%
+                        {Math.round(d.precipitationProbabilityMax ?? 0)}%
                       </p>
                       <p className="tabular w-10 text-right text-muted-foreground">
                         {formatTemp(d.tempMin, units)}
