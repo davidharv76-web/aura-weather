@@ -61,14 +61,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [air, setAir] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch live weather from Open-Meteo on client load
+    let isMounted = true;
     async function loadLiveData() {
       try {
         const res = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${place.lat}&longitude=${place.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_gusts_10m_max&timezone=auto`
         );
         const data = await res.json();
-        if (data && data.current) {
+        if (isMounted && data && data.current) {
           setForecast({
             current: {
               time: data.current.time,
@@ -86,29 +86,33 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
               visibility: 10000,
               cloudCover: data.current.cloud_cover,
             },
-            hourly: (data.hourly.time || []).map((t: string, idx: number) => ({
+            hourly: (data.hourly?.time || []).map((t: string, idx: number) => ({
               time: t,
-              temperature: data.hourly.temperature_2m[idx],
-              weatherCode: data.hourly.weather_code[idx],
-              isDay: Boolean(data.hourly.is_day[idx]),
-              precipitationProbability: data.hourly.precipitation_probability[idx] || 0,
+              temperature: data.hourly.temperature_2m?.[idx] ?? 20,
+              weatherCode: data.hourly.weather_code?.[idx] ?? 0,
+              isDay: Boolean(data.hourly.is_day?.[idx]),
+              precipitationProbability: data.hourly.precipitation_probability?.[idx] || 0,
             })),
-            daily: (data.daily.time || []).map((t: string, idx: number) => ({
+            daily: (data.daily?.time || []).map((t: string, idx: number) => ({
               date: t,
-              tempMin: data.daily.temperature_2m_min[idx],
-              tempMax: data.daily.temperature_2m_max[idx],
-              precipitationProbabilityMax: data.daily.precipitation_probability_max[idx] || 0,
-              precipitationSum: data.daily.precipitation_sum[idx] || 0,
-              windGustsMax: data.daily.wind_gusts_10m_max[idx] || 0,
-              weatherCode: data.daily.weather_code[idx],
+              tempMin: data.daily.temperature_2m_min?.[idx] ?? 15,
+              tempMax: data.daily.temperature_2m_max?.[idx] ?? 22,
+              precipitationProbabilityMax: data.daily.precipitation_probability_max?.[idx] || 0,
+              precipitationSum: data.daily.precipitation_sum?.[idx] || 0,
+              windGustsMax: data.daily.wind_gusts_10m_max?.[idx] || 0,
+              weatherCode: data.daily.weather_code?.[idx] ?? 0,
             })),
           });
         }
       } catch (err) {
-        console.error("Failed to load live forecast:", err);
+        console.error("Error fetching live weather data:", err);
       }
     }
+
     loadLiveData();
+    return () => {
+      isMounted = false;
+    };
   }, [place]);
 
   return (
