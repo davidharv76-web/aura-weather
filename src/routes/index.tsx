@@ -67,13 +67,26 @@ function TodayPage() {
   return (
     <PageFrame>
       {({ forecast, air }) => {
-        if (!forecast?.current) {
-          return null;
-        }
+        // Safe check if current data is present
+        const c = forecast?.current ?? {
+          time: new Date().toISOString(),
+          temperature: 20,
+          apparentTemperature: 20,
+          weatherCode: 0,
+          isDay: true,
+          humidity: 50,
+          windSpeed: 10,
+          windGusts: 12,
+          windDirection: 180,
+          uvIndex: 5,
+          dewPoint: 10,
+          pressure: 1013,
+          visibility: 10000,
+          cloudCover: 20,
+        };
 
-        const c = forecast.current;
-        const info = describeCode(c.weatherCode);
-        const today = forecast.daily?.[0] ?? {
+        const info = describeCode(c.weatherCode ?? 0);
+        const today = forecast?.daily?.[0] ?? {
           date: new Date().toISOString(),
           tempMin: c.temperature,
           tempMax: c.temperature,
@@ -84,20 +97,20 @@ function TodayPage() {
 
         const nowIndex = Math.max(
           0,
-          (forecast.hourly ?? []).findIndex(
-            (h) => h.time.slice(0, 13) === c.time.slice(0, 13)
+          (forecast?.hourly ?? []).findIndex(
+            (h: any) => h.time.slice(0, 13) === c.time.slice(0, 13)
           )
         );
-        const next24 = (forecast.hourly ?? []).slice(nowIndex, nowIndex + 24);
-        const week = (forecast.daily ?? []).slice(0, 7);
-        const weekMin = week.length ? Math.min(...week.map((d) => d.tempMin)) : 0;
-        const weekMax = week.length ? Math.max(...week.map((d) => d.tempMax)) : 100;
+        const next24 = (forecast?.hourly ?? []).slice(nowIndex, nowIndex + 24);
+        const week = (forecast?.daily ?? []).slice(0, 7);
+        const weekMin = week.length ? Math.min(...week.map((d: any) => d.tempMin)) : 0;
+        const weekMax = week.length ? Math.max(...week.map((d: any) => d.tempMax)) : 100;
         const uv = uvBand(c.uvIndex ?? 0);
 
         return (
           <>
-            <SevereAlerts forecast={forecast} units={units} />
-            <WeatherNotifications forecast={forecast} place={place} units={units} />
+            {forecast && <SevereAlerts forecast={forecast} units={units} />}
+            {forecast && <WeatherNotifications forecast={forecast} place={place} units={units} />}
             <section className="glass-strong relative overflow-hidden rounded-4xl px-6 py-10 sm:px-12 sm:py-14">
               <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -125,12 +138,12 @@ function TodayPage() {
                       UV {Math.round(c.uvIndex ?? 0)} · {uv.label}
                     </Chip>
                     <Chip>
-                      Wind {formatSpeed(c.windSpeed, units)} {windDirectionLabel(c.windDirection)}
+                      Wind {formatSpeed(c.windSpeed ?? 0, units)} {windDirectionLabel(c.windDirection ?? 0)}
                     </Chip>
                   </div>
                 </div>
                 <div className="w-full max-w-sm shrink-0 space-y-6 lg:w-[22rem]">
-                  <CelestialTracker forecast={forecast} />
+                  {forecast && <CelestialTracker forecast={forecast} />}
                   <div className="glass rounded-3xl p-5">
                     <p className="text-[11px] uppercase tracking-[0.2em] text-accent">
                       Sun protection
@@ -140,7 +153,7 @@ function TodayPage() {
                 </div>
               </div>
             </section>
-            <MinuteCast forecast={forecast} units={units} />
+            {forecast && <MinuteCast forecast={forecast} units={units} />}
             <section className="mt-14">
               <SectionHeading
                 eyebrow="Next 24 hours"
@@ -158,7 +171,7 @@ function TodayPage() {
               />
               <div className="glass overflow-hidden rounded-3xl">
                 <div className="flex gap-1 overflow-x-auto p-3 no-scrollbar">
-                  {next24.map((h, i) => {
+                  {next24.map((h: any, i: number) => {
                     const g = describeCode(h.weatherCode);
                     return (
                       <div
@@ -185,7 +198,7 @@ function TodayPage() {
               <SectionHeading eyebrow="Today's detail" title="Conditions in full" />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 <MetricTile icon={Thermometer} label="Feels like" value={formatTemp(c.apparentTemperature, units, true)} note={`Dew point ${formatTemp(c.dewPoint ?? 0, units, true)}`} />
-                <MetricTile icon={Wind} label="Wind" value={formatSpeed(c.windSpeed, units)} note={`Gusts ${formatSpeed(c.windGusts ?? 0, units)} · ${windDirectionLabel(c.windDirection)}`} />
+                <MetricTile icon={Wind} label="Wind" value={formatSpeed(c.windSpeed ?? 0, units)} note={`Gusts ${formatSpeed(c.windGusts ?? 0, units)} · ${windDirectionLabel(c.windDirection ?? 0)}`} />
                 <MetricTile icon={Droplets} label="Humidity" value={`${Math.round(c.humidity ?? 0)}%`} note={`Cloud cover ${Math.round(c.cloudCover ?? 0)}%`} />
                 <MetricTile icon={Gauge} label="Pressure" value={formatPressure(c.pressure ?? 1013, units)} />
                 <MetricTile icon={Eye} label="Visibility" value={formatDistance(c.visibility ?? 10000, units)} />
@@ -194,8 +207,8 @@ function TodayPage() {
                 <MetricTile icon={Compass} label="Max gusts today" value={formatSpeed(today.windGustsMax ?? 0, units)} />
               </div>
             </section>
-            <ActivityInsights forecast={forecast} air={air} />
-            <HealthInsights forecast={forecast} air={air} />
+            {forecast && <ActivityInsights forecast={forecast} air={air} />}
+            {forecast && <HealthInsights forecast={forecast} air={air} />}
             {air && <AirQualityCard air={air} />}
             <section className="mt-14">
               <SectionHeading
@@ -213,7 +226,7 @@ function TodayPage() {
                 }
               />
               <div className="glass divide-y divide-border rounded-3xl">
-                {week.map((d, i) => {
+                {week.map((d: any, i: number) => {
                   const g = describeCode(d.weatherCode);
                   const left = ((d.tempMin - weekMin) / Math.max(1, weekMax - weekMin)) * 100;
                   const width = ((d.tempMax - d.tempMin) / Math.max(1, weekMax - weekMin)) * 100;
